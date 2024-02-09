@@ -1,0 +1,88 @@
+name: Deploy all targets by single PR
+env:
+  CURRENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches: ["main", "pr-deploys-api", "pr-deploys-api-2", "pr-deploys-ui", "pr-deploys-ui-2"] # 📝 Update
+jobs:
+  pr-or-deploy:
+    name: Pull Request || One of the Deploy Workflows
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SUPER_GITHUB_TOKEN }} # you should add personal token in your repository (GITHUB_TOKEN can not trigger another workflows)
+
+      - name: log
+        run: echo ${{ env.CURRENT_BRANCH }}
+
+      - name: PR into main
+        if: ${{ env.CURRENT_BRANCH == 'main' }} # main branch only
+        run: >
+          git config user.name workflow-bot && git config user.email workflow-bot@mail.com &&
+          git checkout -b pr-deploys-api && git push origin pr-deploys-api --force &&
+          git checkout -b pr-deploys-api-2 && git push origin pr-deploys-api-2 --force &&
+          git checkout -b pr-deploys-ui && git push origin pr-deploys-ui --force &&
+          git checkout -b pr-deploys-ui-2 && git push origin pr-deploys-ui-2 --force
+          
+
+      - name: Install Deno
+        if: ${{ env.CURRENT_BRANCH != 'main' }} # actual for this example, because each deploy is depends of deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+        # deploy api
+      - name: Upload api to Deno Deploy
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-api' }} # main branch only
+        uses: denoland/deployctl@v1
+        with:
+          project: "pr-deploys-api" # 📝 Update the deploy project name if necessary
+          entrypoint: "./api/main.ts" # 📝 Update the entrypoint if necessary
+
+        # deploy api-2
+      - name: Upload api-2 to Deno Deploy
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-api-2' }} # 📝 Update
+        uses: denoland/deployctl@v1
+        with:
+          project: "pr-deploys-api-2" # 📝 Update the deploy project name if necessary
+          entrypoint: "./api-2/main.ts" # 📝 Update the entrypoint if necessary
+
+        # deploy ui (suppose it is react-client application)
+      - name: Install Node.js for ui building
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-ui' }} # 📝 Update
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Build ui
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-ui' }} # 📝 Update
+        run: "cd ui && npm install && npm run build"
+
+      - name: Upload ui to Deno Deploy
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-ui' }} # 📝 Update
+        uses: denoland/deployctl@v1
+        with:
+          project: "pr-deploys-ui" # 📝 Update
+          entrypoint: https://deno.land/std/http/file_server.ts
+          root: ui/dist
+
+        # deploy ui-2 (suppose it is fresh application with tailwindcss)
+      - name: Build ui-2
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-ui-2' }} # 📝 Update
+        run: "cd ui-2 && deno task build" # 📝 Update the build command(s) if necessary
+
+      - name: Upload ui-2 to Deno Deploy
+        if: ${{ env.CURRENT_BRANCH == 'pr-deploys-ui-2' }} # 📝 Update
+        uses: denoland/deployctl@v1
+        with:
+          project: "pr-deploys-ui-2" # 📝 Update the deploy project name if necessary
+          entrypoint: "main.ts" # 📝 Update the entrypoint if necessary
+          root: "./ui-2"
