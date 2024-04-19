@@ -1,3 +1,5 @@
+## _[see .github/worflows/deploy.yml](./.github/workflows/deploy.yml)_
+
 # 1 explicit PR => many implicit deploys
 (should be actual for monorepos with multiple microservices)
 
