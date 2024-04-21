@@ -1,4 +1,5 @@
 ## _[see .github/worflows/deploy.yml](./.github/workflows/deploy.yml)_
+## _[see illustration](#how-will-looked-your-actions-after-pr-into-main-branch-only)_
 
 # 1 explicit PR => many implicit deploys
 (should be actual for monorepos with multiple microservices)
@@ -23,3 +24,6 @@
 * Configure workflow to trigger on their `push`, `pull requests` etc.
 * Add conditional logic to filter only own workflow and skip other
 * // to be continued... _(maybe)_
+
+## How will looked your actions after pr into main branch only
+![github actions, screen-example](./actions.screen.example.png)
